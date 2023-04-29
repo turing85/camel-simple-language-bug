@@ -1,0 +1,58 @@
+= camel-simple-language-bug
+
+Using `simple("${exchange.getMessage().getBody()}"` throws an exception at runtime when compiling natively:
+
+.Exception at runtime
+[source, bash]
+----
+...
+Caused by: org.apache.camel.component.bean.MethodNotFoundException: Method with name: getMessage() not found on bean: Exchange[ED6D02F79FBB419-0000000000000000] of type: org.apache.camel.support.DefaultExchange on the exchange: Exchange[ED6D02F79FBB419-0000000000000000]
+...
+----
+
+== Reproducer
+* Build the project:
+[source, bash]
+----
+./mvnw clean verify
+----
+* Observe that the tests succeed:
+[source, bash]
+----
+...
+[INFO] Tests run: 1, Failures: 0, Errors: 0, Skipped: 0
+...
+----
+
+* Build the application natively
+[source, bash]
+----
+./mvnw --define native clean verify
+----
+
+* Observe that the tests fail with the above mentioned error in the application log, and an unexpected status code on the tests, reporting a status of `500` instead of the expected `200`:
+[source, bash]
+----
+...
+Caused by: org.apache.camel.component.bean.MethodNotFoundException: Method with name: getMessage() not found on bean: Exchange[FD7D7D11C0B4B98-0000000000000000] of type: org.apache.camel.support.DefaultExchange on the exchange: Exchange[FD7D7D11C0B4B98-0000000000000000]
+...
+Expected status code <200> but was <500>.
+...
+----
+
+== Workaround
+Add the following to `application.yml`:
+[source, yaml]
+----
+quarkus:
+  camel:
+    native:
+      reflection:
+        include-patterns:
+          - org.apache.camel.support.AbstractExchange
+          - org.apache.camel.support.MessageSupport
+----
+
+(See branch `workaround`).
+
+We we only register `AbstractExchange`, the call to `betBody()` in the `simple(...)` will generate the next exception.
