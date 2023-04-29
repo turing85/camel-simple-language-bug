@@ -1,1 +1,8 @@
+quarkus:
+  camel:
+    native:
+      reflection:
+        include-patterns:
+          - org.apache.camel.support.AbstractExchange
+          - org.apache.camel.support.MessageSupport
 greeting: foobar
